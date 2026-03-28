@@ -113,22 +113,19 @@ ultramodern::input::connected_device_info_t get_connected_device_info(int contro
                 .connected_device = ultramodern::input::Device::Controller,
                 .connected_pak = ultramodern::input::Pak::RumblePak,
             };
-        }
-        else {
+        } else {
             return ultramodern::input::connected_device_info_t{
                 .connected_device = ultramodern::input::Device::None,
                 .connected_pak = ultramodern::input::Pak::None,
             };
         }
-    }
-    else {
+    } else {
         if (recompinput::players::get_player_is_assigned(controller_num)) {
             return ultramodern::input::connected_device_info_t{
                 .connected_device = ultramodern::input::Device::Controller,
                 .connected_pak = ultramodern::input::Pak::RumblePak,
             };
-        }
-        else {
+        } else {
             return ultramodern::input::connected_device_info_t{
                 .connected_device = ultramodern::input::Device::None,
                 .connected_pak = ultramodern::input::Pak::None,
@@ -269,7 +266,8 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
 
     // Convert the audio from 16-bit values to floats and swap the audio channels into the
     // swap buffer to correct for the address xor caused by endianness handling.
-    float cur_main_volume = static_cast<float>(recompui::config::sound::get_main_volume()) / 100.0f; // Get the current main volume, normalized to 0.0-1.0.
+    float cur_main_volume = static_cast<float>(recompui::config::sound::get_main_volume()) /
+                            100.0f; // Get the current main volume, normalized to 0.0-1.0.
     for (size_t i = 0; i < sample_count; i += input_channels) {
         swap_buffer[i + 0 + duplicated_input_frames * input_channels] =
             audio_data[i + 1] * (1.0f / 32768.0f) * cur_main_volume;
@@ -465,7 +463,7 @@ std::string get_game_thread_name(const OSThread* t) {
         case THREAD_ID_MAIN:
             name += "MAIN";
             break;
-            
+
         case THREAD_ID_AUDIO:
             name += "AUDIO";
             break;
@@ -610,17 +608,13 @@ void reorder_texture_pack(recomp::mods::ModContext&) {
     recompui::renderer::trigger_texture_pack_update();
 }
 
-void on_launcher_init(recompui::LauncherMenu *menu) {
+void on_launcher_init(recompui::LauncherMenu* menu) {
     auto game_options_menu = menu->init_game_options_menu(
-        supported_games[0].game_id,
-        supported_games[0].mod_game_id,
-        supported_games[0].display_name,
-        supported_games[0].thumbnail_bytes,
-        recompui::GameOptionsMenuLayout::Right
-    );
+        supported_games[0].game_id, supported_games[0].mod_game_id, supported_games[0].display_name,
+        supported_games[0].thumbnail_bytes, recompui::GameOptionsMenuLayout::Right);
     game_options_menu->add_default_options();
 
-    recompui::Element *menu_container = menu->get_menu_container();
+    recompui::Element* menu_container = menu->get_menu_container();
     zelda64::launcher_animation_setup(menu);
 }
 
@@ -726,28 +720,24 @@ int main(int argc, char** argv) {
     // recomp::mods::register_embedded_mod("mm_recomp_dpad_builtin", { (const uint8_t*)(mm_recomp_dpad_builtin),
     // std::size(mm_recomp_dpad_builtin)});
 
-    // REGISTER_FUNC(recomp_get_window_resolution);
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_framerate);
     REGISTER_FUNC(recomp_get_film_grain_enabled);
     REGISTER_FUNC(recomp_get_invert_y_axis_mode);
     REGISTER_FUNC(recomp_get_radio_comm_box_mode);
     REGISTER_FUNC(recomp_get_camera_inputs);
-    // REGISTER_FUNC(recomp_get_targeting_mode);
     REGISTER_FUNC(recomp_get_bgm_volume);
     REGISTER_FUNC(recomp_get_sfx_volume);
-    // REGISTER_FUNC(recomp_get_low_health_beeps_enabled);
     REGISTER_FUNC(recomp_get_gyro_deltas);
     REGISTER_FUNC(recomp_get_mouse_deltas);
     REGISTER_FUNC(recomp_get_inverted_axes);
     REGISTER_FUNC(recomp_get_analog_inverted_axes);
+
     recompui::register_ui_exports();
     recomputil::register_data_api_exports();
 
     zelda64::register_overlays();
     zelda64::register_patches();
-
-    // recomputil::init_extended_actor_data();
 
     recompinput::players::set_single_player_mode(true);
 
