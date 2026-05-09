@@ -12,6 +12,7 @@
 #define audio_seq_localized audio_seq_jp
 #define audio_bank_localized audio_bank_jp
 #define audio_table_localized audio_table_jp
+#define gAudioSpecs_localized gAudioSpecs
 #define gSeqTableInit_localized gSeqTableInit_jp
 #define gSoundFontTableInit_localized gSoundFontTableInit_jp
 #define gSampleBankTableInit_localized gSampleBankTableInit_jp
@@ -26,6 +27,7 @@
 #define audio_seq_localized audio_seq_us
 #define audio_bank_localized audio_bank_us
 #define audio_table_localized audio_table_us
+#define gAudioSpecs_localized gAudioSpecs
 #define gSeqTableInit_localized gSeqTableInit
 #define gSoundFontTableInit_localized gSoundFontTableInit
 #define gSampleBankTableInit_localized gSampleBankTableInit
@@ -34,14 +36,22 @@
 
 #if DEBUG_EU_AUDIO == 1
 #define VERSION_EU
+#if 0 // Original EU ROM
 #include "audio_eu/audio_bank_eu.c"
 #include "audio_eu/audio_seq_eu.c"
 #include "audio_eu/audio_table_eu.c"
+#else // SPANISH MOD
+#include "audio_eu/audio_bank_eu_mod.c"
+#include "audio_eu/audio_seq_eu_mod.c"
+#include "audio_eu/audio_table_eu_mod.c"
+#endif
 #include "audio_eu/audiotables_eu.c"
+#include "audio_eu/audiospecs_eu.c"
 #define audio_seq_localized audio_seq_eu
 #define audio_bank_localized audio_bank_eu
 #define audio_table_localized audio_table_eu
 #define gSeqTableInit_localized gSeqTableInit_eu
+#define gAudioSpecs_localized gAudioSpecs_eu
 #define gSoundFontTableInit_localized gSoundFontTableInit_eu
 #define gSampleBankTableInit_localized gSampleBankTableInit_eu
 #define gSeqFontTableInit_localized gSeqFontTableInit_eu
@@ -49,7 +59,7 @@
 #endif
 
 extern s32 gAudioHeapSize;
-u8 gVoiceLanguage = 1;
+u8 gVoiceLanguage = 0;
 extern unsigned char audio_seq_us[];
 extern unsigned char audio_bank_us[];
 extern unsigned char audio_table_us[];
@@ -133,8 +143,11 @@ RECOMP_PATCH void AudioLoad_Init(void) __attribute__((optnone)) {
     gNumSequences = gSequenceTable->base.numEntries;
 
     // @recomp: use audio tables from data
+    recomp_printf("gSequenceTable->base.numEntries: %d \n", gSequenceTable->base.numEntries);
     AudioLoad_InitTable(gSequenceTable, (u8*) audio_seq_localized, gSequenceMedium);
+    recomp_printf("gSoundFontTable->base.numEntries: %d \n", gSoundFontTable->base.numEntries);
     AudioLoad_InitTable(gSoundFontTable, (u8*) audio_bank_localized, gSoundFontMedium);
+    recomp_printf("gSampleBankTable->base.numEntries: %d \n", gSampleBankTable->base.numEntries);
     AudioLoad_InitTable(gSampleBankTable, (u8*) audio_table_localized, gSampleBankMedium);
 
     numFonts = gSoundFontTable->base.numEntries;
@@ -155,6 +168,192 @@ RECOMP_PATCH void AudioLoad_Init(void) __attribute__((optnone)) {
 
     AudioHeap_InitPool(&gPermanentPool.pool, ramAddr, gPermanentPoolSize);
     AudioSeq_InitSequencePlayers();
+}
+
+RECOMP_PATCH void AudioLoad_InitTable(AudioTable* table, u8* romAddr, u16 unkMediumParam) {
+    s32 i;
+
+    table->base.unkMediumParam = unkMediumParam;
+    table->base.romAddr = (uintptr_t) romAddr;
+
+    for (i = 0; i < table->base.numEntries; i++) {
+        if ((table->entries[i].size != 0) && (table->entries[i].medium == MEDIUM_CART)) {
+            table->entries[i].romAddr += (uintptr_t) romAddr;
+            recomp_printf("table->entries[i].romAddr: %x \n", table->entries[i].romAddr);
+        }
+    }
+}
+#endif
+
+#if DEBUG_EU_AUDIO == 1 && DEBUG_AUDIO_LOCALIZATION == 1
+
+#include "audio_eu\ast_radio_mod.c"
+
+s32 func_radio_800BA7BC(u16* msg, s32 priority);
+
+u16* Message_PtrFromId_SPA(u16 msgId) {
+    s32 i;
+    MsgLookup* lookup = gMsgLookup_SPA;
+
+    while (lookup->msgId != -1) {
+        if (lookup->msgId == msgId) {
+            return lookup->msgPtr;
+        }
+        lookup++;
+    }
+    return NULL;
+}
+
+RECOMP_PATCH void Radio_PlayMessage(u16* msg, RadioCharacterId character) {
+    TeamId teamId;
+    s32 pad;
+    s32 priority;
+
+    gRadioMsgId = Message_IdFromPtr(msg);
+
+    msg = Message_PtrFromId_SPA(gRadioMsgId); // This should get the replacement text pointer
+
+    switch (msg[0]) {
+        default:
+        case MSGCHAR_PRI0:
+            priority = 0;
+            break;
+        case MSGCHAR_PRI1:
+            priority = 1;
+            break;
+        case MSGCHAR_PRI2:
+            priority = 2;
+            break;
+        case MSGCHAR_PRI3:
+            priority = 3;
+            break;
+    }
+
+    if (gGameState == GSTATE_PLAY) {
+        if ((character == RCID_FALCO) || (character == RCID_SLIPPY) || (character == RCID_PEPPY)) {
+            if (character == RCID_FALCO) {
+                teamId = TEAM_ID_FALCO;
+            }
+            if (character == RCID_SLIPPY) {
+                teamId = TEAM_ID_SLIPPY;
+            }
+            if (character == RCID_PEPPY) {
+                teamId = TEAM_ID_PEPPY;
+            }
+            if ((gTeamShields[teamId] <= 0) && (gTeamShields[teamId] != -2)) {
+                return;
+            }
+        }
+    }
+
+    if ((gRadioState != 0) && (func_radio_800BA7BC(msg, priority) == 1)) {
+        return;
+    }
+
+    gRadioMsgPri = priority;
+    gRadioMsgRadioId = character;
+
+    if (gExpertMode && ((character == RCID_FOX) || (character == RCID_FOX_RED))) {
+        gRadioMsgRadioId = RCID_FOX_EXPERT;
+    }
+
+    if (gCurrentLevel == LEVEL_VENOM_2) {
+        switch (character) {
+            case RCID_WOLF:
+                gRadioMsgRadioId = RCID_WOLF_2;
+                break;
+            case RCID_PIGMA:
+                gRadioMsgRadioId = RCID_PIGMA_2;
+                break;
+            case RCID_LEON:
+                gRadioMsgRadioId = RCID_LEON_2;
+                break;
+            case RCID_ANDREW:
+                gRadioMsgRadioId = RCID_ANDREW_2;
+                break;
+        }
+    }
+
+    gRadioMsg = msg;
+    gRadioState = 100;
+
+    switch (gGameState) {
+        case GSTATE_TITLE:
+        case GSTATE_ENDING:
+            gRadioPrintPosY = 176;
+            gRadioPrintPosX = 85;
+            gRadioTextBoxPosX = 80.0f;
+            gRadioTextBoxPosY = 174.0f;
+            gRadioTextBoxScaleX = 4.63f;
+            gRadioPortraitPosX = 32.0f;
+            gRadioPortraitPosY = 174.0f;
+            break;
+
+        case GSTATE_PLAY:
+            gRadioPrintPosY = 180;
+            gRadioPrintPosX = 79;
+            gRadioTextBoxPosX = 74.0f;
+            gRadioTextBoxPosY = 178.0f;
+            gRadioTextBoxScaleX = 4.53f;
+            gRadioPortraitPosX = 26.0f;
+            gRadioPortraitPosY = 178.0f;
+            break;
+    }
+
+//    gRadioMsgId = Message_IdFromPtr(msg);
+    Audio_PlayVoice(gRadioMsgId);
+}
+
+RECOMP_PATCH void Message_DisplayScrollingText(Gfx** gfxPtr, u16* msgPtr, s32 xPos, s32 yPos, s32 yRangeHi, s32 yRangeLo, s32 len) {
+    s32 x = xPos;
+    s32 y = yPos;
+    s32 i;
+
+    msgPtr = Message_PtrFromId_SPA(Message_IdFromPtr(msgPtr)); // This should get the replacement text pointer
+
+    gDPSetTextureLUT((*gfxPtr)++, G_TT_RGBA16);
+    gDPLoadTLUT((*gfxPtr)++, 64, 256, gTextCharPalettes);
+
+    for (i = 0; msgPtr[i] != 0 && i < len; i++) {
+        switch (msgPtr[i]) {
+            case MSGCHAR_NWL:
+                x = xPos;
+                y += 15;
+                break;
+
+            case MSGCHAR_QSP:
+                x += 2;
+                break;
+
+            case MSGCHAR_HSP:
+                x += 3;
+                break;
+
+            case MSGCHAR_SPC:
+                x += 7;
+                break;
+
+            default:
+                if ((yRangeLo < y) && (y < yRangeHi)) {
+                    Message_DisplayChar(gfxPtr, msgPtr[i], x, y);
+                }
+                x += 7;
+                break;
+
+            case MSGCHAR_NP2:
+            case MSGCHAR_NP3:
+            case MSGCHAR_NP4:
+            case MSGCHAR_NP5:
+            case MSGCHAR_NP6:
+            case MSGCHAR_NP7:
+            case MSGCHAR_PRI0:
+            case MSGCHAR_PRI1:
+            case MSGCHAR_PRI2:
+            case MSGCHAR_PRI3:
+            case MSGCHAR_NXT:
+                break;
+        }
+    }
 }
 #endif
 
@@ -311,7 +510,7 @@ s32 osAiSetFrequency(u32 freq);
 RECOMP_PATCH void AudioHeap_Init(void) {
     s32 i;
     s32 j;
-    AudioSpec* spec = &gAudioSpecs[gAudioSpecId];
+    AudioSpec* spec = &((AudioSpec*)gAudioSpecs_localized)[gAudioSpecId];
     ReverbSettings* settings;
     SynthesisReverb* reverb;
     s16* ramAddr;
