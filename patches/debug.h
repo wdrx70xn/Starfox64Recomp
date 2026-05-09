@@ -65,7 +65,7 @@
 // AUDIO
 #define DEBUG_AUDIO_LOCALIZATION 0
 #define DEBUG_US_AUDIO 0
-#define DEBUG_JP_AUDIO 1
+#define DEBUG_JP_AUDIO 0
 #define DEBUG_EU_AUDIO 0
 
 // Settings
